@@ -1,0 +1,165 @@
+---
+title: "STA313 A.2"
+author: "Pakjira Areesomboon & Maryam Ansari"
+date: "11/1/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("ggplot2")
+#install.packages(tidyverse)
+library(tidyverse)  
+library(ggplot2)
+theme_set(theme_bw(base_size=16))
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("ggpubr")
+library(ggpubr)
+#install.packages("writexl")
+library(writexl)
+#install.packages("tidyr")
+library(tidyr)
+#install.packages("scales")
+library(scales)
+#install.packages("forcats")
+library(forcats)
+# Maryam adding packages
+library(kableExtra)
+library(rstatix)
+library(memisc)
+```
+
+```{r, echo=FALSE, include=FALSE}
+bicycle <- read.csv("bicycle-thefts-2014-2019.csv")
+```
+
+```{r, echo = FALSE, include = FALSE}
+glimpse(bicycle)
+```
+
+```{r, echo= FALSE,include=FALSE}
+#Clean Dataset
+just_bicycle <- bicycle[bicycle$Primary_Offence %in% c("THEFT UNDER - BICYCLE", "THEFT OF EBIKE UNDER $5000"), ]
+save(just_bicycle, file = "just_bicycle.csv")
+load("just_bicycle.csv")
+write.csv(just_bicycle, "just_bicycle.csv", row.names=FALSE, quote=FALSE) 
+
+```
+
+```{r, echo = FALSE, include = FALSE}
+glimpse(just_bicycle)
+```
+
+
+### You've heard the stories, the bike thefts issue in Toronto, but what should to keep your bikes from being stolen? Some people might argue "Obviously, bike thefts happen with a low security measure." 
+
+### What if we say there is something you can consider to decrease your chances of your precious bike being stolen?
+
+### What goes into the minds of bike thefts? Is it random? Is there a pattern? Is there a certain bike color or security measure to decrease the likelihood of bike thefts?
+
+
+
+
+# Things to know before buying a bike in toronto.
+
+### First and foremost, which bike type generally gets stolen the most from 2014 to 2019? 
+```{r, echo = FALSE, include = TRUE}
+ggplot(data = just_bicycle, mapping = aes(x = fct_infreq(Bike_Type), colour = Bike_Type, fill = Bike_Type)) + geom_bar() + labs(title = "The Number of Stolen Bikes for Each Bike Type", x = "Type of Bike", y = "Number of Bikes Stolen") +  geom_text(aes(label=..count..),stat='count',position=position_dodge(0.9),vjust=-0.2)
+
+```
+**To Do: Add Table for each variable type? 
+
+We notice that MT (Mountain Bike) and RG (Regular Bike) has a huge difference in the chances of being stolen. Thus, this article is focusing on how to decrease the chances of your Mountain and Regular Bike being stolen, which is majority of the cases. This article is a must-read for active/hiking people and the people looking into to buy just a regular bike.
+
+### Now let's explore "where" do mountain and regular bikes tend to get stolen? 
+We expect to potentially find a relationship between the number of thefts and the socio-economical context of different ways of location type where the crimes were committed.
+
+```{r, echo = FALSE, include = FALSE}
+justmt_rg = just_bicycle[just_bicycle$Bike_Type %in% c("MT", "RG"), ]
+justmt_rg <- cbind(ID = 1:nrow(justmt_rg), justmt_rg)
+```
+
+```{r, echo = FALSE, include = TRUE}
+ggplot(justmt_rg, aes(x = fct_infreq(Premise_Type), group = Bike_Type)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat = "count") +
+  geom_text(aes(label = scales::percent(..prop..), 
+                y = ..prop..), stat = "count", vjust = -0.5, size = 2.8) + 
+  labs(title = "Percentage of Mountain Bikes and Regular Bikes being Stolen from Location Types in Toronto", y = "Percentage ", fill = "Type", x = "Type of Premise in Toronto") +
+  facet_grid(~Bike_Type) +
+  scale_y_continuous(labels=scales::percent) + coord_flip()
+
+```
+As expected, a huge portion of crimes are committed if bikes are kept outside. However, to our surprise, crimes were not that different across the other location types (Apartment, Commercial, House, Others). 
+..
+..
+
+
+\newpage
+
+
+# Line 1 Yonge (alter work)
+
+## 1) Why is this article important since some people might say, "Bike thefts shouldn't be an issue in the future since there are more public transportations and technological advances in Toronto". 
+
+On Dec 17, 2017. The Line 1 Yonge – University was opened, which is currently the busiest rapid transit line in Canada. Due to the opening of the transit, we expected to potentially find a relationship between the number of bike thefts. Our initial hypothesis was that there should be a lower bike theft overall due to the decrease in bikes from 2017 and 2018. However, to our surprise, in 2017, before the introduction of the Line 1, there were 2677 bike thefts, while in 2018, there were 2988 thefts. Or a similar phenomenon in 2019, 
+
+```{r}
+just20172018 = just_bicycle[just_bicycle$Occurrence_Year %in% c("2017", "2018"), ]
+ggplot(data = just20172018, mapping = aes(x = Occurrence_Year)) + geom_bar()
+```
+However, to our surprise, there was no decrease in the number of bicycle thefts after the opening of Line 1 Subway. Further investigation revealed that there was a huge increase in mountain bikes and regular bike thefts. 
+
+
+# Cost
+
+## 2) While making new purchases we all think of our budgets so you must also be wondering how to set your budget. Are you taking chances of theft into consideration? Lets see some insights below.
+
+
+
+
+```{r, echo=FALSE}
+m1 <- just_bicycle %>%
+  filter(Cost_of_Bike != "NA" & Cost_of_Bike != 0) %>%
+  filter(Bike_Type == "MT" | Bike_Type == "RG")
+
+mtab1 <- m1 %>%
+  group_by(Bike_Type) %>%
+  summarise(Min = min(Cost_of_Bike),
+            Q1 = quantile(Cost_of_Bike, 0.25),
+            Median = median(Cost_of_Bike),
+            Mean = mean(Cost_of_Bike),
+            Q3 = quantile(Cost_of_Bike, 0.75),
+            Max = max(Cost_of_Bike))
+
+mtab1 %>%
+  kable(caption= "Statistical Summary of the Cost", position = "h!") %>%
+  kable_styling(font_size = 8.5) %>%
+  row_spec(0, bold = T, color = "white", background = "black") %>%
+  column_spec(1, width = "3 cm") %>%
+  column_spec(2, width = "1.5 cm") %>%
+  column_spec(3, width = "1.5 cm") %>%
+  column_spec(4, width = "1.5 cm") %>%
+  column_spec(5, width = "1.5 cm") %>%
+  column_spec(6, width = "1.5 cm") %>%
+  column_spec(7, width = "1.5 cm")
+  
+```
+
+We can also look at the spread of the cost for the two types of bikes. 
+
+```{r}
+m2 <- m1 %>%
+  filter(Cost_of_Bike <= 4000)
+ggplot(m2, aes(x = Bike_Type, y = Cost_of_Bike)) + geom_boxplot() + coord_flip()
+
+
+```
+From this we can see that most of the bikes for both the types cost less than a $1000. 
+
+Plan: 
+- Give counts of bikes that are technically outliers, insert a table for that.
+- Add more detail to boxplot
+- Mutate cost into categories of under 100, 100-500 etc and then plot it against number of thefts in each category
+
+
